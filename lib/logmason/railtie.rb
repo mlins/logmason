@@ -11,7 +11,7 @@ module Logmason
     config.logmason.broadcast_logger = nil
     config.logmason.enabled = nil  # Auto-detect based on environment
 
-    initializer "logmason.configure_logger", before: :initialize_logger do |app|
+    initializer "logmason.configure_logger", after: :initialize_logger do |app|
       # Auto-enable in production, disable elsewhere (unless explicitly set)
       enabled = app.config.logmason.enabled
       enabled = Rails.env.production? if enabled.nil?
@@ -20,6 +20,11 @@ module Logmason
 
       # Create broadcast logger if configured (e.g., AppSignal)
       broadcast_logger = app.config.logmason.broadcast_logger
+
+      # Auto-detect AppSignal in production if no broadcast logger configured
+      if broadcast_logger.nil? && Rails.env.production? && defined?(Appsignal)
+        broadcast_logger = Appsignal::Logger.new("rails")
+      end
 
       # Determine formatter based on config
       formatter = case app.config.logmason.format
