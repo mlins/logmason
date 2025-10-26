@@ -34,46 +34,50 @@ That's it! Logmason auto-configures via Railtie and enables structured logging i
 
 ## Configuration
 
-All configuration is optional. Defaults work for most use cases.
-
-In `config/application.rb` or `config/environments/*.rb`:
+Logmason auto-configures with sensible defaults. For production-only usage, put all config in `config/environments/production.rb`:
 
 ```ruby
-# Output format (:json or :logfmt)
-config.logmason.format = :json
+# config/environments/production.rb
 
-# Sensitive keys to filter from logs
-config.logmason.filter_keys = [:password, :token, :secret, :api_key]
-
-# Exception backtrace line limit
-config.logmason.backtrace_lines = 10
-
-# Enable/disable (default: true in production, false elsewhere)
+# Enable structured logging
 config.logmason.enabled = true
 
-# Optional: Broadcast to external logger
-config.logmason.broadcast_logger = Appsignal::Logger.new("rails")
+# Output format for STDOUT (:json or :logfmt)
+config.logmason.format = :logfmt
+
+# Sensitive keys to filter from logs (optional - has good defaults)
+# config.logmason.filter_keys = [:password, :token, :secret, :api_key]
+
+# Exception backtrace line limit (optional - defaults to 10)
+# config.logmason.backtrace_lines = 10
 ```
+
+**Note:** The `format` setting only affects STDOUT output (Docker logs, Kamal logs, etc). AppSignal always receives logs in a custom human-readable format optimized for its interface.
+
+All configuration is optional except `enabled`. Defaults work for most use cases.
 
 ## AppSignal Integration
 
-To send logs to AppSignal:
+AppSignal is **automatically detected** in production. If the `appsignal` gem is installed and `Appsignal` is defined, logmason automatically creates a broadcast logger.
+
+**No configuration needed!** Just:
+1. Add `gem 'appsignal'` to your Gemfile
+2. Enable logmason in production
+3. Logs automatically flow to both STDOUT and AppSignal
+
+Logmason sends:
+- **STDOUT**: Structured logs in your chosen format (JSON or LOGFMT)
+- **AppSignal**: Human-readable messages with searchable attributes (custom format)
+- **Both**: Include full request context for correlation
+
+### Manual Broadcast Logger (Optional)
+
+To use a custom broadcast logger instead of auto-detected AppSignal:
 
 ```ruby
-# config/application.rb
-if Rails.env.production?
-  config.after_initialize do
-    if defined?(Appsignal)
-      config.logmason.broadcast_logger = Appsignal::Logger.new("rails")
-    end
-  end
-end
+# config/environments/production.rb
+config.logmason.broadcast_logger = MyCustomLogger.new
 ```
-
-Logmason will:
-- Send structured data to STDOUT in your chosen format
-- Send human-readable messages + attributes to AppSignal
-- Include request context in both outputs
 
 ## Output Format Examples
 
